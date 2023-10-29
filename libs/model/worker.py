@@ -175,7 +175,7 @@ class Worker():
 
         x = x.repeat_interleave(n, dim=0)                       # (bs*n, 3, h, w)
         y = y.repeat_interleave(n, dim=0)                       # (bs*n,)
-        masks = masks.repeat(bs, 1)                             # (bs*n, kb)
+        masks = masks.repeat(bs, 1)                             # (bs*n, kb) kb = (1,1,0,0,1,0,1) switch for each block
 
         # run input on sampled branches
         logits = self.resnet(x, masks)                          # (bs*n, c)

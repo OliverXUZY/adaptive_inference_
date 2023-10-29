@@ -1,6 +1,6 @@
 data:
   dataset: cifar10
-  root: ./data/cifar10
+  root: /backup/zhuoyan/datasets
   downsample: true
   
   train_split: train
@@ -51,7 +51,7 @@ opt:
     weight_decay: 0.05
     sched_type: cosine
 
-  branch_vae: null
+  # branch_vae: null
 
   clip_grad_norm: 1.0
 

@@ -12,6 +12,18 @@ from libs.model import Worker
 from libs.utils import *
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="This is my training script.")
+    parser.add_argument('-c', '--config', type=str, help='config file path')
+    parser.add_argument('-n', '--name', type=str, help='job name')
+    parser.add_argument('-g', '--gpu', type=str, default='0', help='GPU IDs')
+    parser.add_argument('-pf', '--print_freq', type=int, default=1, help='print frequency (x100 itrs)')
+
+    args = parser.parse_args()
+    args.print_freq *= 100
+    return args
+
+
 def main(args):
     # set up checkpoint folder
     os.makedirs('log', exist_ok=True)
@@ -38,7 +50,7 @@ def main(args):
 
     set_log_path(ckpt_path)
     writer = SummaryWriter(os.path.join(ckpt_path, 'tensorboard'))
-    rng = fix_random_seed(cfg.get('seed', 2022))
+    rng = fix_random_seed(cfg.get('seed', 2023))
 
     ###########################################################################
     """ worker """
@@ -235,13 +247,5 @@ def main(args):
     ###########################################################################
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config', type=str, help='config file path')
-    parser.add_argument('-n', '--name', type=str, help='job name')
-    parser.add_argument('-g', '--gpu', type=str, default='0', help='GPU IDs')
-    parser.add_argument('-pf', '--print_freq', type=int, default=1, 
-                        help='print frequency (x100 itrs)')
-    args = parser.parse_args()
-    args.print_freq *= 100
-    
+    args = parse_args()
     main(args)
