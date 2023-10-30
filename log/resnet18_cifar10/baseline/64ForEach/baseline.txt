@@ -1,0 +1,7 @@
+skip 1 block | macs: 0.8801(0.0225) | accs: 94.9053(0.2256)
+skip 2 block | macs: 0.7602(0.0360) | accs: 94.2541(0.5179)
+skip 3 block | macs: 0.6388(0.0514) | accs: 93.2825(0.8663)
+skip 4 block | macs: 0.5231(0.0648) | accs: 90.6625(2.6751)
+skip 5 block | macs: 0.4032(0.0784) | accs: 84.7450(5.5397)
+skip 6 block | macs: 0.2849(0.0916) | accs: 72.4959(10.1108)
+skip 7 block | macs: 0.1645(0.1053) | accs: 52.6589(5.3887)

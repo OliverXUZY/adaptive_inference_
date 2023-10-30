@@ -59,33 +59,18 @@ def main(args):
     print('val data size: {:d}'.format(len(val_set)))
 
     
-    # Set random seed for the built-in random module
-    seed_value = 42  # you can choose any number you like
-    random.seed(seed_value)
-
-    # get all combinations of blocks to be skipped
-    skip_combinations = args.skip_combinations
     
-    # print(masks)
-    if len(skip_combinations) > 0:
-        masks = np.ones((len(skip_combinations), 7))
-        for combination_i, skip_indices in enumerate(skip_combinations):
-            # Set blocks to be skipped to zero
-            for idx in skip_indices:
-                masks[combination_i,idx-2] = 0
-    else:
-        masks = np.ones((1, 7)) # none skip, full path
 
     
     # print(masks)
-    masks = masks.astype(bool)
+    masks = np.array([False,  True, False,  True, False, False, False]).reshape(1,7)
+    # print(masks)
+    # assert False
     
     # assert False
     masks_torch = torch.from_numpy(masks).cuda()
     # print(masks)
-    # assert False
-    skip_block = args.skip_block
-    log_str = f"skip {skip_block} block | "
+
 
     accs = np.zeros((len(masks), len(val_loader)))
 
@@ -108,8 +93,8 @@ def main(args):
             acc = is_correct.sum() / y.shape[0]
             accs[k][idx] = acc.item()
 
-            # macs = (masks_torch[k] * macs_brk[1:]).sum(dim=-1) + macs_brk[0]
-            # macs.clamp_(max=1)
+            macs = (masks_torch[k] * macs_brk[1:]).sum(dim=-1) + macs_brk[0]
+            macs.clamp_(max=1)
             # print("masks_torch[k] shape", masks_torch[k].shape)
             # print("masks_torch[k]", masks_torch[k])
             # print("macs_brk: ", macs_brk)
@@ -121,44 +106,22 @@ def main(args):
         macs = (masks_torch[k] * macs_brk[1:]).sum(dim=-1) + macs_brk[0]
         macs.clamp_(max=1)
         macs_total[k] = macs.item()
-        # print(macs)
+        print(macs)
         # assert False
         
          # Compute overall accuracy
         overall_accuracy = total_correct / total_samples
+        print(overall_accuracy)
         over_accs[k] = overall_accuracy
+    log_str = ""
     log_str += "macs: {:.2f}({:.2f}) | ".format(macs_total.mean()*100, macs_total.std()*100)
     log_str += "accs: {:.2f}({:.2f})".format(over_accs.mean()*100, over_accs.std()*100)
-    utils.log(log_str,"baseline.txt")
+    print(log_str)
 
-    np.savez(
-        f"{log_path}/resnet18_cifar10_skip{skip_block}.npz", 
-        masks=masks,
-        accs=accs.astype(float),
-        over_accs = over_accs.astype(float),
-        macs_total = macs_total.astype(float)
-    )
+    
     
 
 
 if __name__ == '__main__':
     args = parse_args()
-    # blocks 2 to 8 inclusive
-    blocks = list(range(1,8))
-    count = 0
-    for skip_block in range(1,8):
-        # get all combinations of blocks to be skipped
-        print(f"skip {skip_block} blocks!")
-        args.skip_block = skip_block
-        skip_combinations = list(itertools.combinations(blocks, skip_block))
-        # print("skip_combinations: ", skip_combinations)
-        print(f"there are {len(skip_combinations)} skip_combinations here.")
-        args.skip_combinations = skip_combinations
-        count += len(skip_combinations)
-        main(args)
-        print("==========================================")
-
-    args.skip_combinations = []
-    args.skip_block = 0
     main(args)
-    # 

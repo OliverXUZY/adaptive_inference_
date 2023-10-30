@@ -28,6 +28,7 @@ def check_path(path):
 
 def ensure_path(path, remove=False):
     if os.path.exists(path):
+        print("path exists! path: ",path)
         if remove:
             if input('{:s} exists, remove? ([y]/n): '.format(path)) != 'n':
                 shutil.rmtree(path)

@@ -8,11 +8,26 @@ from libs.datasets import make_dataset, make_data_loader
 from libs.model import Worker
 from libs.utils import *
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-n', '--name', type=str, help='job name')
+    parser.add_argument(
+        '-m', '--macs', type=float, default=1, help='MACs constraint'
+    )
+    parser.add_argument('-g', '--gpu', type=str, default='0', help='GPU IDs')
+    parser.add_argument('-p', '--load_path', type=str, 
+                        default='./log/resnet18_cifar10/train_resnet18_cifar10', 
+                        help='path to load model')
+    args = parser.parse_args()
+    return args
 
 def main(args):
 
-    os.makedirs('log', exist_ok=True)
-    ckpt_path = os.path.join('log', args.name)
+    if args.load_path:
+        ckpt_path = args.load_path
+    else:
+        os.makedirs('log', exist_ok=True)
+        ckpt_path = os.path.join('log', args.name)
     cfg_path = os.path.join(ckpt_path, 'config.yaml')
     check_file(cfg_path)
     cfg = load_config(cfg_path)
@@ -25,7 +40,7 @@ def main(args):
     set_gpu(args.gpu)
 
     set_log_path(ckpt_path)
-    rng = fix_random_seed(cfg.get('seed', 2022))
+    rng = fix_random_seed(cfg.get('seed', 2023))
 
     ###########################################################################
     """ worker """
@@ -38,6 +53,8 @@ def main(args):
     worker.load(ckpt)
     worker.cuda(cfg.get('_parallel'))
     print('worker initialized')
+
+    # print("cfg['model'] branch_vae_cfg = model_cfg: ", cfg['model'].get('branch_vae'))
 
     ###########################################################################
     """ dataset """
@@ -65,6 +82,9 @@ def main(args):
     metrics = {k: AverageMeter() for k in metrics_list}
 
     cfg['eval']['max_macs'] = args.macs
+    # print(cfg['eval'])  # {'n_branches': 128, 'max_macs': 1, 'batch_size': 128}
+    # assert False
+    
     worker.prep_test_branches(**cfg['eval'])
 
     for rx, cx, y in val_loader:
@@ -76,18 +96,12 @@ def main(args):
 
     log_str = 'Results:\n'
     for k in metrics_list:
-        log_str += '  {:s}\t{:.3f}\n'.format(k, metrics[k].item())
-    print(log_str)
+        log_str += '  {:s}\t{:.2f}\n'.format(k, metrics[k].item()*100)
+    # print(log_str)
+    log(log_str, "eval.txt")
 
     ###########################################################################
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-n', '--name', type=str, help='job name')
-    parser.add_argument(
-        '-m', '--macs', type=float, default=1, help='MACs constraint'
-    )
-    parser.add_argument('-g', '--gpu', type=str, default='0', help='GPU IDs')
-    args = parser.parse_args()
-    
+    args = parse_args()
     main(args)

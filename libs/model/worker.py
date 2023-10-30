@@ -136,7 +136,12 @@ class Worker():
         if n_branches < self.n_branches:
             b_idx = random.sample(b_idx, n_branches)
         b_idx = torch.LongTensor(b_idx)
+        # print("b_idx.shape: ", b_idx.shape)
+        # print("self.bit_mask: ", self.bit_mask)
         masks = b_idx[:, None].bitwise_and(self.bit_mask).ne(0)
+        # print(b_idx[:, None].bitwise_and(self.bit_mask))
+        # print("================")
+        # assert False
         return masks
 
     @torch.no_grad()
@@ -152,6 +157,8 @@ class Worker():
         """
         macs = (masks * self.macs_brk[1:]).sum(dim=-1) + self.macs_brk[0]
         macs.clamp_(max=1)
+        # print("macs.shape: ", macs.shape)
+        # assert False
         return macs
 
     @torch.no_grad()
@@ -172,6 +179,8 @@ class Worker():
         """
         bs, n = x.size(0), masks.size(0)
         macs = self._calculate_macs(masks)
+        # print(f"macs.shape: {macs.shape}")
+        # assert False
 
         x = x.repeat_interleave(n, dim=0)                       # (bs*n, 3, h, w)
         y = y.repeat_interleave(n, dim=0)                       # (bs*n,)
@@ -201,8 +210,9 @@ class Worker():
         ## (2) cheaper positive branches have larger targets
         rs_target = is_positive * (1 - macs).clamp_(min=1e-3)   # (bs, n)
 
+        # print(f"is_positive.shape: {is_positive.shape}, ")
         # select positive branches
-        positives = masks[is_positive.flatten()]                # (?, kb)
+        positives = masks[is_positive.flatten()]                # (?, kb) ? is how many trues in is_positive
 
         return rs_target, bce_target, positives
 
@@ -237,16 +247,21 @@ class Worker():
         else:
             # include all branches
             assert self.n_branches <= 4096, 'too many branches for inference'
-            all_masks = self._sample_branches(self.n_branches).cuda()
+            all_masks = self._sample_branches(self.n_branches).cuda() # [n,kb] [128,7]
             macs = self._calculate_macs(all_masks)
             all_masks = all_masks[macs <= max_macs]
-        self.masks = all_masks
-        self.macs = self._calculate_macs(all_masks)
-
+        self.masks = all_masks                                  # [n,kb] [128,7]
+        self.macs = self._calculate_macs(all_masks)             # [n] [128]
+        # print("self.masks.shape: ", self.masks.shape)
+        # print("self.masks: ", self.masks)
+        # print("self.macs.shape: ", self.macs.shape)
+        
         # embed sampled branches
         self.bv = torch.cat(
             [self._embed_branch(m) for m in all_masks.split(batch_size)]
         )
+        # print("self.bv.shape: ", self.bv.shape) # [n,branch_enc.out_dim] [128,128]
+        # assert False
 
     def _calculate_logits(self, cv, bv, temperature=1):
         """
@@ -297,7 +312,9 @@ class Worker():
         ## sc_logits: (bs, n)
         cv = self._embed_content(cx)                            # (bs, d)
         bv = self._embed_branch(masks)                          # (n, d)
-        sc_logits = self._calculate_logits(cv, bv, cfg['temperature'])
+        # print(f"cv.shape: {cv.shape} | bv.shape: {bv.shape}")
+        
+        sc_logits = self._calculate_logits(cv, bv, cfg['temperature']) # (bs, n)
 
         # calculate losses
         ## scheduler and VAE are independently optimized
@@ -363,8 +380,14 @@ class Worker():
         # select inference branch
         cv = self._embed_content(cx)                            # (bs, d)
         sc_logits = self._calculate_logits(cv, self.bv)         # (bs, n)
+        # print("self.masks: ", self.masks)
+        
         _, b_idx = sc_logits.max(dim=1)                         # (bs,)
+        # print("b_idx: ", b_idx)
+        
         masks = self.masks[b_idx]                               # (bs, kb)
+        # print("masks: ", masks)
+        # assert False
         macs = self.macs[b_idx]                                 # (bs,)
 
         # run input on selected branch

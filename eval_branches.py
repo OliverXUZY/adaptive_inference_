@@ -15,7 +15,7 @@ net.eval()
 
 val_set = make_dataset(
     dataset='imagenet',
-    root='./data/imagenet',
+    root='/srv/home/zxu444/datasets/imagenet/images',
     split='val',
 )
 val_loader = make_data_loader(
@@ -25,7 +25,8 @@ val_loader = make_data_loader(
     num_workers=12,
     is_training=False,
 )
-
+# print("zhuoyan: ", len(val_loader))
+# assert False
 masks = np.ones((15, 15))
 for i in range(15):
     idx = random.sample(range(15), 2)
@@ -46,7 +47,7 @@ for k in range(len(masks)):
         accs[k][idx] = acc.item()
 
 np.savez(
-    '13.npz', 
+    'resnet50_INet.npz', 
     masks=masks,
     accs=accs.astype(float),
 )

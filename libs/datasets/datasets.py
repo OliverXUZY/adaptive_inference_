@@ -58,8 +58,8 @@ class CIFAR10Dataset(CIFAR10):
     def __init__(self, root, split='train', downsample=True):
         assert split in ('train', 'test')
         train = split == 'train'
+        # print("zhuoyan: ", root)
         super(CIFAR10Dataset, self).__init__(root, train, download=True)
-
         if split == 'train':
             self.transform = transforms.Compose([
                 transforms.RandomCrop(32, padding=4),

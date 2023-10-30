@@ -1,6 +1,6 @@
 data:
   dataset: cifar10
-  root: /backup/zhuoyan/datasets
+  root: /srv/home/zxu444/datasets/cifar10_dataset 
   downsample: true
   
   train_split: train
@@ -29,10 +29,10 @@ model:
     out_dim: 128
     arch: resnet8_cifar
 
-  branch_vae:
-    hid_dim: 32
-    n_layers: 3
-    latent_dim: 2
+  # branch_vae:
+  #   hid_dim: 32
+  #   n_layers: 3
+  #   latent_dim: 2
 
 opt:
   epochs: 20

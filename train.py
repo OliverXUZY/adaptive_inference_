@@ -77,7 +77,7 @@ def main(args):
 
     ###########################################################################
     """ dataset """
-
+    # print("zhuoyan train: ", cfg['data']['root'])
     train_set = make_dataset(
         dataset=cfg['data']['dataset'],
         root=cfg['data']['root'],
@@ -149,7 +149,7 @@ def main(args):
     metrics = {k: AverageMeter() for k in metrics_list}
 
     timer = Timer()
-
+    ep_timer= Timer()
     for ep in range(ep0, n_epochs):
         # train for one epoch
         for itr, (rx, cx, y) in enumerate(train_loader, 1):
@@ -240,6 +240,8 @@ def main(args):
         log_str += time_str(timer.end()) + '\n'
         log(log_str, 'log.txt')
         timer.start()
+
+        log(f"total time: {time_str(ep_timer.end())} | {time_str(ep_timer.end()/(ep+1-ep0)*(n_epochs-ep0))}")
 
     writer.close()
     print('all done!')

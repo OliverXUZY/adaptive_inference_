@@ -124,7 +124,7 @@ class BranchEncoder(nn.Module):
             x = x[..., -1]
         else:
             x = x.mean(dim=-1)
-        x = self.fc(x)                                  # (n, c)
+        x = self.fc(x)                                  # (n, c) # c: out_dim: 128 in res18_cifar10
         return x
 
 

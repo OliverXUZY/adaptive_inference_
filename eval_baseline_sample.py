@@ -3,11 +3,11 @@ import argparse
 import torch
 import numpy as np
 from collections import defaultdict 
-import itertools
 
 from libs.datasets import make_dataset, make_data_loader
 from libs.model import make_resnet
-from libs.utils import fix_random_seed
+from libs.utils import fix_random_seed, check_file
+from libs.core import load_config
 import libs.utils as utils
 
 def parse_args():
@@ -38,9 +38,8 @@ def main(args):
     macs_brk = macs_brk.cuda()
     net = net.cuda()
     net.eval()
-    log_path = f"log/resnet18_{cfg['data']['dataset']}/baseline"
-    utils.set_log_path(log_path)
-    utils.ensure_path(log_path)
+    utils.set_log_path(f"log/resnet18_{cfg['data']['dataset']}")
+    utils.ensure_path(f"log/resnet18_{cfg['data']['dataset']}")
 
     val_set = make_dataset(
         dataset=cfg['data']['dataset'],
@@ -58,25 +57,14 @@ def main(args):
 
     print('val data size: {:d}'.format(len(val_set)))
 
-    
+    masks = np.ones((128, 7))
     # Set random seed for the built-in random module
     seed_value = 42  # you can choose any number you like
     random.seed(seed_value)
-
-    # get all combinations of blocks to be skipped
-    skip_combinations = args.skip_combinations
-    
-    # print(masks)
-    if len(skip_combinations) > 0:
-        masks = np.ones((len(skip_combinations), 7))
-        for combination_i, skip_indices in enumerate(skip_combinations):
-            # Set blocks to be skipped to zero
-            for idx in skip_indices:
-                masks[combination_i,idx-2] = 0
-    else:
-        masks = np.ones((1, 7)) # none skip, full path
-
-    
+    skip_block = args.skip_block
+    for i in range(128-1): # the last one is always true, skip no blocks
+        idx = random.sample(range(7), skip_block)
+        masks[i, idx] = 0
     # print(masks)
     masks = masks.astype(bool)
     
@@ -84,7 +72,6 @@ def main(args):
     masks_torch = torch.from_numpy(masks).cuda()
     # print(masks)
     # assert False
-    skip_block = args.skip_block
     log_str = f"skip {skip_block} block | "
 
     accs = np.zeros((len(masks), len(val_loader)))
@@ -132,33 +119,17 @@ def main(args):
     utils.log(log_str,"baseline.txt")
 
     np.savez(
-        f"{log_path}/resnet18_cifar10_skip{skip_block}.npz", 
+        f"log/resnet18_{cfg['data']['dataset']}/resnet18_cifar10_skip{skip_block}.npz", 
         masks=masks,
         accs=accs.astype(float),
         over_accs = over_accs.astype(float),
         macs_total = macs_total.astype(float)
     )
-    
 
 
 if __name__ == '__main__':
     args = parse_args()
-    # blocks 2 to 8 inclusive
-    blocks = list(range(1,8))
-    count = 0
     for skip_block in range(1,8):
-        # get all combinations of blocks to be skipped
-        print(f"skip {skip_block} blocks!")
         args.skip_block = skip_block
-        skip_combinations = list(itertools.combinations(blocks, skip_block))
-        # print("skip_combinations: ", skip_combinations)
-        print(f"there are {len(skip_combinations)} skip_combinations here.")
-        args.skip_combinations = skip_combinations
-        count += len(skip_combinations)
+        # print(args)
         main(args)
-        print("==========================================")
-
-    args.skip_combinations = []
-    args.skip_block = 0
-    main(args)
-    # 
