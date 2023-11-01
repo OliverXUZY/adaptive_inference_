@@ -15,6 +15,9 @@ def parse_args():
     parser.add_argument('-c', '--config', type=str, help='config file path')
     parser.add_argument('-n', '--name', type=str, help='job name')
     parser.add_argument('-g', '--gpu', type=str, default='0', help='GPU IDs')
+    parser.add_argument('-m', '--model', type=str, default='resnet50', help='backbone')
+    parser.add_argument('--dataset', type=str, default='imagenet', help='The dataset we used')
+
 
     args = parser.parse_args()
     return args
@@ -26,20 +29,32 @@ def main(args):
     # print(cfg)
     # assert False
     cfg = defaultdict(dict)
-    cfg['data'] = {'dataset': 'cifar10',
-                    'root': '/srv/home/zxu444/datasets/cifar10_dataset ',
-                    'downsample': True,
-                    'train_split': 'train',
-                    'val_split': 'test',
-                    'batch_size': 64,
-                    'num_workers': 8}
+    if args.dataset == 'cifar10':
+        cfg['data'] = {'dataset': 'cifar10',
+                        'root': '/srv/home/zxu444/datasets/cifar10_dataset ',
+                        'downsample': True,
+                        'train_split': 'train',
+                        'val_split': 'test',
+                        'batch_size': 64,
+                        'num_workers': 8}
 
-    net, macs_brk = make_resnet('resnet18', 'cifar10', True)
+        net, macs_brk = make_resnet(args.model, 'cifar10', True)
+    elif args.dataset == 'imagenet':
+        cfg['data'] = {'dataset': 'imagenet',
+                        'root': '/backup/zhuoyan/datasets/imagenet',
+                        'downsample': True,
+                        'train_split': 'train',
+                        'val_split': 'val',
+                        'batch_size': 16,
+                        'num_workers': 12}
+
+        net, macs_brk = make_resnet(args.model, 'imagenet', True)
+
     macs_brk = macs_brk.cuda()
     net = net.cuda()
     net.eval()
-    utils.set_log_path(f"log/resnet18_{cfg['data']['dataset']}")
-    utils.ensure_path(f"log/resnet18_{cfg['data']['dataset']}")
+    utils.set_log_path(f"log/{args.model}_{cfg['data']['dataset']}")
+    utils.ensure_path(f"log/{args.model}_{cfg['data']['dataset']}")
 
     val_set = make_dataset(
         dataset=cfg['data']['dataset'],
@@ -57,13 +72,23 @@ def main(args):
 
     print('val data size: {:d}'.format(len(val_set)))
 
-    masks = np.ones((128, 7))
+    ### construct masks
+    # do not skip first block!
+    if args.model == "resnet18":
+        num_block = 7
+    elif args.model == "resnet50":
+        num_block = 15
+    else:
+        raise NotImplementedError
+
+    
+    masks = np.ones((128, num_block))
     # Set random seed for the built-in random module
     seed_value = 42  # you can choose any number you like
     random.seed(seed_value)
     skip_block = args.skip_block
-    for i in range(128-1): # the last one is always true, skip no blocks
-        idx = random.sample(range(7), skip_block)
+    for i in range(128): # the last one is always true, skip no blocks
+        idx = random.sample(range(num_block), skip_block)
         masks[i, idx] = 0
     # print(masks)
     masks = masks.astype(bool)
@@ -119,7 +144,7 @@ def main(args):
     utils.log(log_str,"baseline.txt")
 
     np.savez(
-        f"log/resnet18_{cfg['data']['dataset']}/resnet18_cifar10_skip{skip_block}.npz", 
+        f"log/{args.model}_{cfg['data']['dataset']}/{args.model}_cifar10_skip{skip_block}.npz", 
         masks=masks,
         accs=accs.astype(float),
         over_accs = over_accs.astype(float),
@@ -129,7 +154,15 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    for skip_block in range(1,8):
+    # do not skip first block!
+    if args.model == "resnet18":
+        num_block = 8
+    elif args.model == "resnet50":
+        num_block = 16
+    else:
+        raise NotImplementedError
+
+    for skip_block in range(1,num_block):
         args.skip_block = skip_block
         # print(args)
         main(args)
