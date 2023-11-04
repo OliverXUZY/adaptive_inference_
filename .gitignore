@@ -8,5 +8,5 @@ __pycache__/
 libs/model/ckpt/
 
 # Ignore all content in log and eulerlog
-log/
-eulerlog/
+# eulerlog/
+# log/
