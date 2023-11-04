@@ -6,3 +6,7 @@ __pycache__/
 
 # Ignore all content in the libs/model/ckpt directory
 libs/model/ckpt/
+
+# Ignore all content in log and eulerlog
+log/
+eulerlog/
