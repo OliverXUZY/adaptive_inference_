@@ -4,7 +4,9 @@ import os
 import torch
 import torch.nn as nn
 import numpy as np
-
+from torchvision.models import get_weight
+from timm.models._hub import has_hf_hub, download_cached_file, check_cached_file, load_state_dict_from_hf
+from collections import OrderedDict
 
 ckpt_dir = os.path.join(os.path.dirname(__file__), 'ckpt')
 macs_dir = os.path.join(os.path.dirname(__file__), 'macs')
@@ -218,7 +220,7 @@ def resnet50(dataset='imagenet'):
 def resnet101(dataset='imagenet'):
     return ResNet(Bottleneck, [3, 4, 23, 3], [64, 128, 256, 512], dataset)
 
-def make_resnet(arch, dataset, return_macs=True):
+def make_resnet(arch, dataset, return_macs=True, load_from = "customized"):
     if arch == 'resnet18':      model = resnet18(dataset)
     elif arch == 'resnet34':    model = resnet34(dataset)
     elif arch == 'resnet50':    model = resnet50(dataset)
@@ -229,8 +231,19 @@ def make_resnet(arch, dataset, return_macs=True):
         )
 
     # load pre-trained weights
-    ckpt_path = os.path.join(ckpt_dir, '{:s}_{:s}.pth'.format(arch, dataset))
-    model.load_state_dict(torch.load(ckpt_path))
+    # TODO: temporarily!
+    if load_from == "customized":
+        ckpt_path = os.path.join(ckpt_dir, '{:s}_{:s}.pth'.format(arch, dataset))
+        model.load_state_dict(torch.load(ckpt_path))
+    elif load_from == "timm":
+        state_dict = load_state_dict_from_hf("timm/resnet50.a1_in1k")
+        print("load_state_dict_from_hf--timm/resnet50.a1_in1k: ", len(state_dict.items()))
+        # Create an ordered dictionary with keys in the same order as resnet50.state_dict()
+        ordered_state_dict = OrderedDict((key, state_dict[key]) for key in model.state_dict().keys() if key in state_dict)
+        model.load_state_dict(ordered_state_dict)
+    else:
+        raise NotImplementedError("This feature hasn't been implemented yet.")
+
     model.eval()
 
     if not return_macs:
