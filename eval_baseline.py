@@ -174,7 +174,8 @@ def main(args):
                                     overall_accuracy,
                                     time_str(one_mask_timer.end()), 
                                     time_str(one_mask_timer.end() / (k+1) * len(masks))
-                                    ))
+                                    ), 
+                "log.txt")
     log_str += "macs: {:.2f}({:.2f}) | ".format(macs_total.mean()*100, macs_total.std()*100)
     log_str += "accs: {:.2f}({:.2f}) | ".format(over_accs.mean()*100, over_accs.std()*100)
     
@@ -188,6 +189,7 @@ def main(args):
         macs_total = macs_total.astype(float)
     )
     log_str += "time elapsed: {}".format(time_str(timer.end()))
+    utils.log(log_str,"log.txt")
     utils.log(log_str,"baseline.txt")
     
     print("========== done ==========")
