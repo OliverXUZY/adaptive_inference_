@@ -21,6 +21,7 @@ def parse_args():
     parser.add_argument('-g', '--gpu', type=str, default=None, help='GPU IDs')
     parser.add_argument('-m', '--model', type=str, default='resnet50', help='backbone')
     parser.add_argument('--dataset', type=str, default='imagenet', help='The dataset we used')
+    parser.add_argument('--skip_block', type=int, default=0, help='how many blocks to skip')
 
 
     args = parser.parse_args()
@@ -212,7 +213,9 @@ if __name__ == '__main__':
     else:
         raise NotImplementedError
 
-    for skip_block in range(3,num_block):
-        args.skip_block = skip_block
+    main(args)
+
+    # for skip_block in range(3,num_block):
+    #     args.skip_block = skip_block
         # print(args)
-        main(args)
+        
