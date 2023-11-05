@@ -220,7 +220,7 @@ def resnet50(dataset='imagenet'):
 def resnet101(dataset='imagenet'):
     return ResNet(Bottleneck, [3, 4, 23, 3], [64, 128, 256, 512], dataset)
 
-def make_resnet(arch, dataset, return_macs=True, load_from = "customized"):
+def make_resnet(arch, dataset, return_macs=True, load_from = "customized", model_card = "timm/resnet50.a1_in1k"):
     if arch == 'resnet18':      model = resnet18(dataset)
     elif arch == 'resnet34':    model = resnet34(dataset)
     elif arch == 'resnet50':    model = resnet50(dataset)
@@ -234,10 +234,13 @@ def make_resnet(arch, dataset, return_macs=True, load_from = "customized"):
     # TODO: temporarily!
     if load_from == "customized":
         ckpt_path = os.path.join(ckpt_dir, '{:s}_{:s}.pth'.format(arch, dataset))
-        model.load_state_dict(torch.load(ckpt_path))
+        if torch.cuda.is_available():
+            model.load_state_dict(torch.load(ckpt_path))
+        else:
+            model.load_state_dict(torch.load(ckpt_path, map_location=torch.device('cpu')))
     elif load_from == "timm":
-        state_dict = load_state_dict_from_hf("timm/resnet50.a1_in1k")
-        print("load_state_dict_from_hf--timm/resnet50.a1_in1k: ", len(state_dict.items()))
+        state_dict = load_state_dict_from_hf(model_card)
+        print(f"load_state_dict_from_hf--{model_card}--length of state_dict{len(state_dict.items())}")
         # Create an ordered dictionary with keys in the same order as resnet50.state_dict()
         ordered_state_dict = OrderedDict((key, state_dict[key]) for key in model.state_dict().keys() if key in state_dict)
         model.load_state_dict(ordered_state_dict)

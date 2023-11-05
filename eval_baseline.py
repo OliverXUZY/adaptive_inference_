@@ -76,7 +76,7 @@ def main(args):
     print('val data size: {:d}'.format(len(val_set)))
 
     ### model
-    net, macs_brk = make_resnet(args.model, args.dataset, True, load_from="timm")
+    net, macs_brk = make_resnet(args.model, args.dataset, True, load_from="timm", model_card = "timm/resnet50.a3_in1k")
     macs_brk = macs_brk.cuda()
     net = net.cuda()
     if args._parallel:
@@ -182,7 +182,7 @@ def main(args):
     
     
     np.savez(
-        f"log/{args.model}_{cfg['data']['dataset']}/{args.model}_cifar10_skip{skip_block}.npz", 
+        f"log/{args.model}_{cfg['data']['dataset']}_a3/{args.model}_{cfg['data']['dataset']}_skip{skip_block}.npz", 
         masks=masks,
         accs=accs.astype(float),
         over_accs = over_accs.astype(float),
@@ -212,7 +212,7 @@ if __name__ == '__main__':
     else:
         raise NotImplementedError
 
-    for skip_block in range(10,num_block):
+    for skip_block in range(3,num_block):
         args.skip_block = skip_block
         # print(args)
         main(args)
