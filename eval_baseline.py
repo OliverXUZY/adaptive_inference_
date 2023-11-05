@@ -212,7 +212,7 @@ if __name__ == '__main__':
     else:
         raise NotImplementedError
 
-    for skip_block in range(3,num_block):
+    for skip_block in range(10,num_block):
         args.skip_block = skip_block
         # print(args)
         main(args)

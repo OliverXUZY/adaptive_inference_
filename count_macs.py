@@ -17,7 +17,7 @@ def input_constructor_factory(mask):
 def main(args):
     # load model
     print('Loading model...')
-    net = make_resnet(args.arch, args.dataset, return_macs=False)
+    net = make_resnet(args.arch, args.dataset, return_macs=False,load_from = "timm")
     net.cuda()
 
     # define branch masks
@@ -55,7 +55,7 @@ def main(args):
     
     os.makedirs(args.path, exist_ok=True)
     out_path = os.path.join(
-        args.path, '{:s}_{:s}.npy'.format(args.arch, args.dataset)
+        args.path, '{:s}_{:s}_timm.npy'.format(args.arch, args.dataset)
     )
     np.save(out_path, macs_breakdown)
     print('Done!')
