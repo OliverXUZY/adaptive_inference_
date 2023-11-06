@@ -7,6 +7,14 @@ import torch.nn as nn
 from itertools import combinations
 from math import comb
 
+
+import sys
+import os
+run_dir = os.path.dirname(os.path.abspath(__file__))
+project_dir = os.path.dirname(run_dir)
+if project_dir not in sys.path:
+    sys.path.insert(0, project_dir)
+
 from libs.datasets import make_dataset, make_data_loader
 from libs.model import make_resnet
 from libs.utils import fix_random_seed, check_file

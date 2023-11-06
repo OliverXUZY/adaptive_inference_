@@ -4,7 +4,6 @@ import os
 import torch
 import torch.nn as nn
 import numpy as np
-from torchvision.models import get_weight
 from timm.models._hub import has_hf_hub, download_cached_file, check_cached_file, load_state_dict_from_hf
 from collections import OrderedDict
 
