@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-#SBATCH -J ada_array  # give the job a name   
+#SBATCH -J ada_vit  # give the job a name   
 #***SBATCH --partition=batch_default ***
 # 
 # 1 node, 1 CPU per node (total 1 CPU), wall clock time of hours
@@ -12,10 +12,10 @@
 #SBATCH --cpus-per-task=16     ## CPUs per task; number of threads of each task
 #SBATCH -t 56:00:00          ## Walltime
 #SBATCH --mem=40GB
-#SBATCH -p research
+#SBATCH -p lianglab,research
 #SBATCH --exclude=euler[01-09],euler[11-12],euler[14],euler[24-27]
-#SBATCH --error=./eulerlog/array/ft_array_job_slurm_%A_%a.err
-#SBATCH --output=./eulerlog/array/ft_array_job_slurm_%A_%a.out
+#SBATCH --error=./eulerlog/array/array2_job_slurm_%A_%a.err
+#SBATCH --output=./eulerlog/array/array2_job_slurm_%A_%a.out
 source ~/.bashrc
 
 echo "SLURM_JOBID: " $SLURM_JOBID
@@ -38,10 +38,10 @@ echo "======== run with different inputs ========"
 # for take different input from different lines of input_file_list.txt
 # echo $( awk "NR==$SLURM_ARRAY_TASK_ID" input_path_list.txt )
 
-python eval_baseline.py \
+python tools/eval_baseline_vit.py \
     --skip_block $( awk "NR==$SLURM_ARRAY_TASK_ID" input_files_jobarray/input_file_skip_block.txt )
 
 
-# sbatch --array=1-16 jobArrayScript.sh
+# sbatch --array=1-12 jobArrayScript2.sh
 
 # --dependency=afterany:341497

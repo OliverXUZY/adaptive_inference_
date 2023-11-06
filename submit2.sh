@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 #
-#SBATCH -J ada_array  # give the job a name   
+#SBATCH --output=./eulerlog/o_device_%j.out
+#SBATCH --error=./eulerlog/o_device_%j.err
+#SBATCH -J ada_inf2  # give the job a name   
 #***SBATCH --partition=batch_default ***
 # 
 # 1 node, 1 CPU per node (total 1 CPU), wall clock time of hours
@@ -10,19 +12,12 @@
 #SBATCH --ntasks=1            ## Tasks
 #SBATCH --gres=gpu:2          ## GPUs
 #SBATCH --cpus-per-task=16     ## CPUs per task; number of threads of each task
-#SBATCH -t 56:00:00          ## Walltime
-#SBATCH --mem=40GB
-#SBATCH -p research
+#SBATCH -t 256:00:00          ## Walltime
+#SBATCH --mem=80GB
+#SBATCH -p lianglab
 #SBATCH --exclude=euler[01-09],euler[11-12],euler[14],euler[24-27]
-#SBATCH --error=./eulerlog/array/ft_array_job_slurm_%A_%a.err
-#SBATCH --output=./eulerlog/array/ft_array_job_slurm_%A_%a.out
 source ~/.bashrc
 
-echo "SLURM_JOBID: " $SLURM_JOBID
-echo "SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
-echo "SLURM_ARRAY_JOB_ID: " $SLURM_ARRAY_JOB_ID
-
-#*** for testing CUDA, run python code below
 echo "======== testing CUDA available ========"
 echo "running on machine: " $(hostname -s)
 python - << EOF
@@ -35,13 +30,7 @@ print(torch.cuda.get_device_name(0))
 EOF
 
 echo "======== run with different inputs ========"
-# for take different input from different lines of input_file_list.txt
-# echo $( awk "NR==$SLURM_ARRAY_TASK_ID" input_path_list.txt )
-
-python eval_baseline.py \
-    --skip_block $( awk "NR==$SLURM_ARRAY_TASK_ID" input_files_jobarray/input_file_skip_block.txt )
 
 
-# sbatch --array=1-16 jobArrayScript.sh
 
-# --dependency=afterany:341497
+python eval_baseline2.py

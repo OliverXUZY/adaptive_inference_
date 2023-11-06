@@ -48,10 +48,8 @@ class ada_Block(Block):
             x (float tensor, (bs, seq, D)): feature maps.
             mask (bool tensor, (bs,)): mask for residual connection.
         """
-        # print("zhuoyan forward")
         x = x + drop_path(self.ls1(self.attn(self.norm1(x))), mask)
         x = x + drop_path(self.ls2(self.mlp(self.norm2(x))), mask)
-        # print("zhuoyan forward end")
         
         return x
 
