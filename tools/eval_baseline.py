@@ -63,7 +63,7 @@ def main(args):
 
     
     
-    log_path = f"log/{args.model}_{cfg['data']['dataset']}_a3"
+    log_path = f"log/testEval3_{args.model}_{cfg['data']['dataset']}"
     utils.set_log_path(log_path)
     utils.ensure_path(log_path)
 
@@ -85,7 +85,7 @@ def main(args):
     print('val data size: {:d}'.format(len(val_set)))
 
     ### model
-    net, macs_brk = make_resnet(args.model, args.dataset, True, load_from="timm", model_card = "timm/resnet50.a3_in1k")
+    net, macs_brk = make_resnet(args.model, args.dataset, True, load_from="timm", model_card = "timm/resnet50.a1_in1k")
     macs_brk = macs_brk.cuda()
     net = net.cuda()
     if args._parallel:

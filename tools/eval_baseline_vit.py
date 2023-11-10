@@ -62,7 +62,7 @@ def main(args):
 
     
     
-    log_path = f"log/{args.model}_{cfg['data']['dataset']}"
+    log_path = f"log/testEval2_{args.model}_{cfg['data']['dataset']}"
     utils.set_log_path(log_path)
     utils.ensure_path(log_path)
 
@@ -85,7 +85,7 @@ def main(args):
 
     ### model
     if "resnet" in args.model:
-        net, macs_brk = make_resnet(args.model, args.dataset, True, load_from="timm", model_card = "timm/resnet50.a3_in1k")
+        net, macs_brk = make_resnet(args.model, args.dataset, True, load_from="timm", model_card = "timm/resnet50.a1_in1k")
         macs_brk = macs_brk.cuda()
     elif "vit" in args.model:
         # TODO: tem
@@ -237,7 +237,7 @@ if __name__ == '__main__':
         args._parallel = True
 
     
-    args.skip_block = 0
+    args.skip_block = 2
     main(args)
 
     # for skip_block in range(3,num_block):
