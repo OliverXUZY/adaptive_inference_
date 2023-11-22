@@ -76,8 +76,8 @@ class ada_VisionTransformer(VisionTransformer):
         x = self.norm(x)
         return x
     
-    def forward(self, x, masks = None):
-        x = self.forward_features(x, masks)
+    def forward(self, x, mask = None):
+        x = self.forward_features(x, mask)
         
         x = self.forward_head(x)
         return x
