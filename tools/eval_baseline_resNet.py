@@ -6,7 +6,7 @@ from collections import defaultdict
 import torch.nn as nn 
 from itertools import combinations
 from math import comb
-from torch.utils.data import Subset
+
 
 import sys
 import os
@@ -16,23 +16,11 @@ if project_dir not in sys.path:
     sys.path.insert(0, project_dir)
 
 from libs.datasets import make_dataset, make_data_loader
-from libs.model import make_resnet, make_vit
+from libs.model import make_resnet
 from libs.utils import fix_random_seed, check_file
 from libs.core import load_config
 import libs.utils as utils
 from libs.utils import Timer, time_str
-
-def subset_dataset(dataset, num_samples = 500):
-    
-    # Set the random seed for reproducibility
-    random_seed = 42
-    torch.manual_seed(random_seed)
-    # Generate random indices
-    indices = torch.randperm(len(dataset))[:num_samples]
-    # Create a subset
-    subset = Subset(dataset, indices)
-    return subset
-
 
 def parse_args():
     parser = argparse.ArgumentParser(description="This is my training script.")
@@ -41,7 +29,8 @@ def parse_args():
     parser.add_argument('-g', '--gpu', type=str, default=None, help='GPU IDs')
     parser.add_argument('-m', '--model', type=str, default='resnet50', help='backbone')
     parser.add_argument('--dataset', type=str, default='imagenet', help='The dataset we used')
-    parser.add_argument('--limit', type=int, default=0, help='take a subset of val dataset')
+    parser.add_argument('--skip_block', type=int, default=0, help='how many blocks to skip')
+
 
     args = parser.parse_args()
     return args
@@ -74,7 +63,7 @@ def main(args):
 
     
     
-    log_path = f"log/subset/{args.model}_{cfg['data']['dataset']}"
+    log_path = f"log/{args.model}_{cfg['data']['dataset']}_a3"
     utils.set_log_path(log_path)
     utils.ensure_path(log_path)
 
@@ -85,12 +74,6 @@ def main(args):
         split=cfg['data']['val_split'],
         downsample=cfg['data'].get('downsample', False),
     )
-    print('val data size: {:d}'.format(len(val_set)))
-    if args.limit > 0:
-        val_set = subset_dataset(val_set, num_samples = args.limit)
-        print('subset val data size: {:d}'.format(len(val_set)))
-        
-
     val_loader = make_data_loader(
         val_set, 
         generator=rng,
@@ -99,27 +82,12 @@ def main(args):
         is_training=False,
     )
 
-    
+    print('val data size: {:d}'.format(len(val_set)))
 
     ### model
-    if "resnet" in args.model:
-        net, macs_brk = make_resnet(args.model, args.dataset, True, load_from="timm", model_card = "timm/resnet50.a3_in1k")
-        macs_brk = macs_brk.cuda()
-    elif "vit" in args.model:
-        # TODO: tem
-        net = make_vit(model_card = "timm/vit_small_patch16_224.augreg_in1k", dataset = args.dataset, return_macs=True)
-        macs_brk = torch.from_numpy(np.ones(12).astype(np.float32)).cuda()
-    else:
-        raise NotImplementedError("Other backbone hasn't been implemented yet")
+    net, macs_brk = make_resnet(args.model, args.dataset, True, load_from="timm", model_card = "timm/resnet50.a3_in1k")
+    macs_brk = macs_brk.cuda()
     net = net.cuda()
-
-    compare_official = False
-    if compare_official:
-        import timm
-        vit = timm.create_model("timm/vit_small_patch16_224.augreg_in1k", pretrained=True)
-        vit = vit.cuda()
-        vit.eval()
-    
     if args._parallel:
         net = nn.DataParallel(net)
     net.eval()
@@ -127,23 +95,39 @@ def main(args):
     ### construct masks
     # do not skip first block!
     if args.model == "resnet18":
-        num_block = 8-1
+        num_block = 7
     elif args.model == "resnet50":
-        num_block = 16-1
-    elif "vit" in args.model:
-        num_block = 12-1
+        num_block = 15
     else:
-        raise NotImplementedError("num block of other backbone hasn't been implemented yet")
+        raise NotImplementedError
 
-    masks = np.random.binomial(size=num_block, n=1, p= 0.5).reshape(1,num_block)
+    # skip block
+    skip_block = args.skip_block
+    log_str = f"skip {skip_block} block | "
+    num_combinations = comb(num_block, skip_block)
+
+    if num_combinations <= 64:
+        all_combinations = list(combinations(range(num_block), skip_block))
+        masks = np.ones((len(all_combinations), num_block))
+        for i, idx in enumerate(all_combinations):
+            masks[i, idx] = 0
+    else:
+
+        masks = np.ones((64, num_block))
+        # Set random seed for the built-in random module
+        seed_value = 42  # you can choose any number you like
+        random.seed(seed_value)
+        
+        for i in range(64): # the last one is always true, skip no blocks
+            idx = random.sample(range(num_block), skip_block)
+            masks[i, idx] = 0
     print("mask.shape: ", masks.shape)
-    print(masks)
-    # assert False
     masks = masks.astype(bool)
     
     # assert False
     masks_torch = torch.from_numpy(masks).cuda()
-    
+    # print(masks)
+    # assert False
     
 
     ### start inference
@@ -162,16 +146,21 @@ def main(args):
         one_loader_timer.start()
         for idx, (x, _, y) in enumerate(val_loader):
             x, y = x.cuda(), y.cuda()
+            # print("y.shape", y.shape)
             mask = masks_torch[k].repeat(y.shape[0], 1)
-            
             with torch.no_grad():
                 logits = net(x, mask)
             _, pred = logits.max(dim=1)
-            
             is_correct = pred == y
             acc = is_correct.sum() / y.shape[0]
             accs[k][idx] = acc.item()
 
+            # macs = (masks_torch[k] * macs_brk[1:]).sum(dim=-1) + macs_brk[0]
+            # macs.clamp_(max=1)
+            # print("masks_torch[k] shape", masks_torch[k].shape)
+            # print("masks_torch[k]", masks_torch[k])
+            # print("macs_brk: ", macs_brk)
+            # print("macs", macs)
 
             # Update counters
             total_correct += (pred == y).sum().item()
@@ -202,7 +191,7 @@ def main(args):
     
     
     np.savez(
-        f"{log_path}/{args.model}_{cfg['data']['dataset']}.npz", 
+        f"{log_path}/{args.model}_{cfg['data']['dataset']}_skip{skip_block}.npz", 
         masks=masks,
         accs=accs.astype(float),
         over_accs = over_accs.astype(float),
@@ -219,12 +208,19 @@ def main(args):
 if __name__ == '__main__':
     args = parse_args()
     device_count = torch.cuda.device_count()
-    args._parallel = False
     if device_count > 1:
         print(f"Multiple GPUs detected (n_gpus={device_count}), use all of them!")
         args._parallel = True
 
     
+    # do not skip first block!
+    if args.model == "resnet18":
+        num_block = 8
+    elif args.model == "resnet50":
+        num_block = 16
+    else:
+        raise NotImplementedError
+
     main(args)
 
     # for skip_block in range(3,num_block):

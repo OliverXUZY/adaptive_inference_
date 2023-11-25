@@ -39,7 +39,15 @@ def parse_args():
 def main(args):
     timer = Timer()
 
-    num_block = 16-1
+    if args.model == "resnet18":
+        num_block = 8-1
+    elif args.model == "resnet50":
+        num_block = 16-1
+    elif "vit" in args.model:
+        num_block = 12-1
+    else:
+        raise NotImplementedError("num block of other backbone hasn't been implemented yet")
+
     # skip block
     skip_block = args.skip_block
     log_str = f"skip {skip_block} block | "
@@ -50,13 +58,13 @@ def main(args):
     seed_value = 42  # you can choose any number you like
     random.seed(seed_value)
     
-    skip_block = 2
+    skip_block = 1
     for i in range(64): # the last one is always true, skip no blocks
         idx = random.sample(range(num_block), skip_block)
         masks[i, idx] = 0
     evaluator = Evaluator(model_name = args.model, dataset_name = args.dataset, limit = 0, random_seed = 2023)
 
-    evaluator.set_log_path(log_path = f"log/testEval_{args.model}_{args.dataset}")
+    evaluator.set_log_path(log_path = f"log/testEval_{args.model}_{args.dataset}_test1")
     evaluator.evaluate(masks)
     evaluator.save()
 
