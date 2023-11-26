@@ -10,13 +10,23 @@
 #SBATCH -N 1                  ## Node count
 #SBATCH --ntasks-per-node=1   ## Processors per node
 #SBATCH --ntasks=1            ## Tasks
-#SBATCH --gres=gpu:2          ## GPUs
+#SBATCH --gres=gpu:1          ## GPUs
 #SBATCH --cpus-per-task=16     ## CPUs per task; number of threads of each task
 #SBATCH -t 256:00:00          ## Walltime
 #SBATCH --mem=80GB
 #SBATCH -p lianglab
 #SBATCH --exclude=euler[01-09],euler[11-12],euler[14],euler[24-27]
 source ~/.bashrc
+
+# Start GPU monitoring in the background
+(
+    while true; do
+        nvidia-smi | tee -a ./log/gpu_usage_${SLURM_JOB_ID}.log
+        sleep 600  # Log every 600 seconds
+    done
+) &
+monitor_pid=$!
+
 
 echo "======== testing CUDA available ========"
 echo "running on machine: " $(hostname -s)
@@ -33,4 +43,9 @@ echo "======== run with different inputs ========"
 
 
 
-python eval_baseline.py
+
+python train.py \
+    -c '/srv/home/zxu444/vision/adaptive_inference/configs/resnet50_imagenet.yaml' \
+    -n 'train_resnet50_imagenet' \
+    -pf 1 \
+
