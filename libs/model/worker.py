@@ -132,18 +132,18 @@ class Worker():
         Returns:
             masks (bool tensor, (n, kb)): branch masks.
         """
-        print("total branches: ", self.n_branches)
+        # print("total branches: ", self.n_branches)
         b_idx = list(range(self.n_branches))
         if n_branches < self.n_branches:
             b_idx = random.sample(b_idx, n_branches)
         b_idx = torch.LongTensor(b_idx)
-        print("b_idx.shape: ", b_idx.shape)
-        print("b_idx: ", b_idx)
-        print("self.bit_mask: ", self.bit_mask)
+        # print("b_idx.shape: ", b_idx.shape)
+        # print("b_idx: ", b_idx)
+        # print("self.bit_mask: ", self.bit_mask)
         # print(b_idx[:, None].shape, b_idx[:, None])
         masks = b_idx[:, None].bitwise_and(self.bit_mask).ne(0)
-        print(b_idx[:, None].bitwise_and(self.bit_mask))
-        print(masks)
+        # print(b_idx[:, None].bitwise_and(self.bit_mask))
+        # print(masks)
         # print("================")
         # assert False
         return masks

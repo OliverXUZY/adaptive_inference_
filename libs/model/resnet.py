@@ -8,7 +8,7 @@ from timm.models._hub import has_hf_hub, download_cached_file, check_cached_file
 from collections import OrderedDict
 
 ckpt_dir = os.path.join(os.path.dirname(__file__), 'ckpt')
-macs_dir = os.path.join(os.path.dirname(__file__), 'macs')
+macs_dir = os.path.join(os.path.dirname(__file__), 'macs',"timm")
 
 n_classes = {'imagenet': 1000, 'cifar10': 10, 'cifar100': 100}
 
@@ -219,7 +219,7 @@ def resnet50(dataset='imagenet'):
 def resnet101(dataset='imagenet'):
     return ResNet(Bottleneck, [3, 4, 23, 3], [64, 128, 256, 512], dataset)
 
-def make_resnet(arch, dataset, return_macs=True, load_from = "customized", model_card = "timm/resnet50.a1_in1k"):
+def make_resnet(arch, dataset, return_macs=True, load_from = "timm", model_card = "timm/resnet50.a1_in1k"):
     if arch == 'resnet18':      model = resnet18(dataset)
     elif arch == 'resnet34':    model = resnet34(dataset)
     elif arch == 'resnet50':    model = resnet50(dataset)
