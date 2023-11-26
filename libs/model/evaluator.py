@@ -192,15 +192,13 @@ class Evaluator:
         
         for idx, (x, _, y) in enumerate(self.val_loader):
             x, y = x.cuda(), y.cuda()
-            # print("zhuoyan before=", mask.shape)
             if len(mask.shape) == 1:
-                mask_input = mask.repeat(y.shape[0], 1)
+                mask = mask.repeat(y.shape[0], 1)
             else:
-                mask_input = mask
                 assert len(mask.shape) == 2, f"for one mask in forward, mask shape is {mask.shape}"
-
+            
             with torch.no_grad():
-                logits = self.net(x, mask_input)
+                logits = self.net(x, mask)
             _, pred = logits.max(dim=1)
             
             is_correct = pred == y

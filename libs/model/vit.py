@@ -11,47 +11,85 @@ from timm.models._factory import parse_model_name
 from timm.models._registry import is_model, model_entrypoint, split_model_name_tag
 
 
-def drop_path(x, mask=None, scale_by_keep: bool = False):
-    """
-    similar to timm.layers.drop, instead of take drop_prob, we take masks, make it deterministic
+# def drop_path(x, mask=None, scale_by_keep: bool = False):
+#     """
+#     similar to timm.layers.drop, instead of take drop_prob, we take masks, make it deterministic
     
-    Apply the drop path (Stochastic Depth) per sample in a deterministic manner using masks.
+#     Apply the drop path (Stochastic Depth) per sample in a deterministic manner using masks.
 
-    Args:
-        x (Tensor): The input tensor.
-        mask (Tensor or None): A boolean tensor of shape (batch_size,) indicating which samples
-                               should apply the residual connection.
-        scale_by_keep (bool): Whether to scale the output by the keep probability.
+#     Args:
+#         x (Tensor): The input tensor.
+#         mask (Tensor or None): A boolean tensor of shape (batch_size,) indicating which samples
+#                                should apply the residual connection.
+#         scale_by_keep (bool): Whether to scale the output by the keep probability.
 
-    """
-    if mask is None:
-        return x
-    if scale_by_keep:
-        # Calculate the keep probability based on the mask.
-        keep_prob = mask.float().mean().item()
-        scale_factor = 1 / keep_prob if keep_prob > 0. else 0.
-    else:
-        scale_factor = 1.0
+#     """
+#     if mask is None:
+#         return x
+#     if scale_by_keep:
+#         # Calculate the keep probability based on the mask.
+#         keep_prob = mask.float().mean().item()
+#         scale_factor = 1 / keep_prob if keep_prob > 0. else 0.
+#     else:
+#         scale_factor = 1.0
 
-    # Only apply residuals to the masked entries.
-    output = torch.zeros_like(x)
-    output[mask] = x[mask] * scale_factor
+#     # Only apply residuals to the masked entries.
+#     output = torch.zeros_like(x)
+#     output[mask] = x[mask] * scale_factor
 
-    return output
+#     return output
+
+
+# class ada_Block(Block):
+    
+#     def forward(self, x, mask = None):
+#         """
+#         Args:
+#             x (float tensor, (bs, seq, D)): feature maps.
+#             mask (bool tensor, (bs,)): mask for residual connection.
+#         """
+#         # print("zhuoyan forward")
+#         x = x + drop_path(self.ls1(self.attn(self.norm1(x))), mask)
+#         x = x + drop_path(self.ls2(self.mlp(self.norm2(x))), mask)
+#         # print("zhuoyan forward end")
+        
+#         return x
 
 
 class ada_Block(Block):
     
-    def forward(self, x, mask = None):
+    def forward(self, x, mask=None):
+        # print(mask)
+        # print(x[0][0])
         """
         Args:
-            x (float tensor, (bs, seq, D)): feature maps.
-            mask (bool tensor, (bs,)): mask for residual connection.
+            x (Tensor): Input tensor of shape (batch_size, seq_length, dim).
+            mask (Boolean Tensor or None): A tensor of shape (batch_size,) indicating which samples
+                                           should apply the residual connection.
         """
-        x = x + drop_path(self.ls1(self.attn(self.norm1(x))), mask)
-        x = x + drop_path(self.ls2(self.mlp(self.norm2(x))), mask)
-        
+        if mask is None:
+            # Process all samples normally if no mask is provided.
+            x = x + self.ls1(self.attn(self.norm1(x)))
+            x = x + self.ls2(self.mlp(self.norm2(x)))
+        else:
+            # Process only the samples that are not masked.
+            # You apply the transformations only to the masked entries
+            # and then put them back into the original tensor.
+            # print(mask)
+            # print("Before applying transformations:", x[mask][1][1])
+            res1 = self.ls1(self.attn(self.norm1(x[mask])))
+            x[mask] = x[mask] + res1
+            # print("After applying first set of transformations:", x[mask][1][1])
+
+            res2 = self.ls2(self.mlp(self.norm2(x[mask])))
+            x[mask] = x[mask] + res2
+            # print("After applying second set of transformations:", x[mask][1][1])
+
+        # print(x[0][0])
         return x
+
+
+
 
 class ada_VisionTransformer(VisionTransformer):
 
@@ -77,6 +115,7 @@ class ada_VisionTransformer(VisionTransformer):
         return x
     
     def forward(self, x, mask = None):
+        # print("ada_VisionTransformer mask: ", mask)
         x = self.forward_features(x, mask)
         
         x = self.forward_head(x)
