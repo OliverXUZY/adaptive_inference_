@@ -10,7 +10,7 @@ from timm.models._builder import build_model_with_cfg
 from timm.models._factory import parse_model_name
 from timm.models._registry import is_model, model_entrypoint, split_model_name_tag
 
-
+macs_dir = os.path.join(os.path.dirname(__file__), 'macs')
 # def drop_path(x, mask=None, scale_by_keep: bool = False):
 #     """
 #     similar to timm.layers.drop, instead of take drop_prob, we take masks, make it deterministic
@@ -189,4 +189,11 @@ def make_vit(model_card = "timm/vit_small_patch16_224.augreg_in1k", dataset = No
         )
     else:
         raise NotImplementedError("Not implemented")
-    return model
+    
+    if not return_macs:
+        return model
+    
+    macs_path = os.path.join(macs_dir, 'timm', '{:s}_{:s}.npy'.format("vit", dataset))
+    macs = torch.from_numpy(np.load(macs_path).astype(np.float32))
+
+    return model, macs

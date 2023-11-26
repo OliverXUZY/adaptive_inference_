@@ -22,6 +22,9 @@ from libs.core import load_config
 import libs.utils as utils
 from libs.utils import Timer, time_str
 
+torch.backends.cuda.enable_mem_efficient_sdp(False)
+torch.backends.cuda.enable_flash_sdp(False)
+torch.backends.cuda.enable_math_sdp(True)
 
 def parse_args():
     parser = argparse.ArgumentParser(description="This is my training script.")
@@ -31,6 +34,8 @@ def parse_args():
     parser.add_argument('-m', '--model', type=str, default='resnet50', help='backbone')
     parser.add_argument('--dataset', type=str, default='imagenet', help='The dataset we used')
     parser.add_argument('--skip_block', type=int, default=0, help='how many blocks to skip')
+    parser.add_argument('--log_path', type=str, default=None, help='the log path')
+    parser.add_argument('--limit', type=int, default=0, help='limit sample to evaluate')
 
 
     args = parser.parse_args()
@@ -71,9 +76,13 @@ def main(args):
             masks[i, idx] = 0
     #######
 
-    evaluator = Evaluator(model_name = args.model, dataset_name = args.dataset, limit = 5000, random_seed = 2023)
-    evaluator.set_log_path(log_path = f"log/subset5000/testEval_{args.model}_{args.dataset}")
-    evaluator.evaluate(masks)
+    evaluator = Evaluator(model_name = args.model, dataset_name = args.dataset, limit = args.limit, random_seed = 2023)
+    if args.log_path is None:
+        log_path = f"log/subset{args.limit}/testEval_{args.model}_{args.dataset}"
+    else:
+        log_path = args.log_path
+    evaluator.set_log_path(log_path = log_path)
+    evaluator.evaluate(masks, skip_block = skip_block)
     evaluator.save(masks = masks, skip_block = skip_block)
 
 if __name__ == '__main__':

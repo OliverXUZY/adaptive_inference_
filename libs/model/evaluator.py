@@ -50,7 +50,7 @@ class Evaluator:
                             'train_split': 'train',
                             'val_split': 'val',
                             'batch_size': 512,
-                            'num_workers': 12}
+                            'num_workers': 8}
 
         
         self.cfg = cfg
@@ -85,8 +85,8 @@ class Evaluator:
             macs_brk = macs_brk.cuda()
         elif "vit" in self.model_name:
             # TODO: tem
-            net = make_vit(model_card = "timm/vit_small_patch16_224.augreg_in1k", dataset = self.dataset_name, return_macs=True)
-            macs_brk = torch.from_numpy(np.ones(12).astype(np.float32)).cuda()
+            net, macs_brk = make_vit(model_card = "timm/vit_small_patch16_224.augreg_in1k", dataset = self.dataset_name, return_macs=True)
+            macs_brk = macs_brk.cuda()
         else:
             raise NotImplementedError("Other backbone hasn't been implemented yet")
         self.macs_brk = macs_brk
@@ -120,7 +120,7 @@ class Evaluator:
 
         self.num_block = num_block
 
-    def evaluate(self, masks):
+    def evaluate(self, masks, skip_block):
         assert masks.shape[1] == self.num_block, f"masks.shape is {masks.shape}"
         if np.issubdtype(masks.dtype, np.number):
             masks = masks.astype(bool)
@@ -137,6 +137,7 @@ class Evaluator:
         accs_mask_loader = []
         accs_mask = []
         macs_mask = []
+        log_str = f"skip {skip_block} block | "
 
         for k in range(masks_torch.shape[0]):
             macs, acc, accs_all_batch = self._evaluation_loop(masks_torch[k])
@@ -147,24 +148,26 @@ class Evaluator:
                                     time_str(one_mask_timer.end()), 
                                     time_str(one_mask_timer.end() / (k+1) * len(masks))
                                     ), 
-                "log.txt")
+                f"log_skip{skip_block}.txt")
             
             accs_mask.append(acc)
             macs_mask.append(macs)
             accs_mask_loader.append(accs_all_batch)
-            
-        # log_str += "macs: {:.2f}({:.2f}) | ".format(macs_total.mean()*100, macs_total.std()*100)
-        # log_str += "accs: {:.2f}({:.2f}) | ".format(over_accs.mean()*100, over_accs.std()*100)
+        
+        macs_total = np.array(macs_mask)
+        over_accs = np.array(accs_mask)
+        log_str += "macs: {:.2f}({:.2f}) | ".format(macs_total.mean()*100, macs_total.std()*100)
+        log_str += "accs: {:.2f}({:.2f}) | ".format(over_accs.mean()*100, over_accs.std()*100)
         
         self.accs_mask = np.array(accs_mask)
         self.macs_mask = np.array(macs_mask)
         self.accs_mask_loader = np.array(accs_mask_loader)
         
         
-        log_str = ""
+        
         log_str += "total time elapsed: {}".format(time_str(one_mask_timer.end()))
-        utils.log(log_str,"log.txt")
-        # utils.log(log_str,"baseline.txt")
+        utils.log(log_str,f"log_skip{skip_block}.txt")
+        utils.log(log_str,"baseline.txt")
         
         print("========== done ==========")
     

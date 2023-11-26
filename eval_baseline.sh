@@ -2,4 +2,7 @@
 
 
 python tools/eval_baseline.py \
-    --skip_block 1
+    --model vit \
+    --skip_block 0 \
+    --log_path debug \
+    --limit 10

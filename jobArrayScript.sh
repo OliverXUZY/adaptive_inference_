@@ -9,7 +9,7 @@
 #SBATCH --ntasks-per-node=1   ## Processors per node
 #SBATCH --ntasks=1            ## Tasks
 #SBATCH --gres=gpu:1          ## GPUs
-#SBATCH --cpus-per-task=12     ## CPUs per task; number of threads of each task
+#SBATCH --cpus-per-task=8     ## CPUs per task; number of threads of each task
 #SBATCH -t 256:00:00          ## Walltime
 #SBATCH --mem=40GB
 #SBATCH -p research
@@ -39,6 +39,7 @@ echo "======== run with different inputs ========"
 # echo $( awk "NR==$SLURM_ARRAY_TASK_ID" input_path_list.txt )
 
 python tools/eval_baseline.py \
+    --limit 5000 \
     --skip_block $( awk "NR==$SLURM_ARRAY_TASK_ID" input_files_jobarray/input_file_skip_block.txt )
 
 
