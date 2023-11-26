@@ -47,6 +47,8 @@ def main(args):
     if n_gpus > 1:
         cfg['_parallel'] = True
     set_gpu(args.gpu)
+    print(f"cfg['_parallel']: {cfg.get('_parallel') or False}")
+    # assert False
 
     set_log_path(ckpt_path)
     writer = SummaryWriter(os.path.join(ckpt_path, 'tensorboard'))
