@@ -50,8 +50,7 @@ def main(args):
 
     # skip block
     skip_block = args.skip_block
-    utils.set_log_path(log_path = f"log/testEval_{args.model}_{args.dataset}")
-    utils.log(f"skip {skip_block} block | ")
+    print(f"skip {skip_block} block | ")
     num_combinations = comb(num_block, skip_block)
 
     #######
@@ -73,10 +72,9 @@ def main(args):
     #######
 
     evaluator = Evaluator(model_name = args.model, dataset_name = args.dataset, limit = 5000, random_seed = 2023)
-
     evaluator.set_log_path(log_path = f"log/subset5000/testEval_{args.model}_{args.dataset}")
     evaluator.evaluate(masks)
-    evaluator.save()
+    evaluator.save(masks = masks, skip_block = skip_block)
 
 if __name__ == '__main__':
     args = parse_args()

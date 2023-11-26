@@ -10,10 +10,7 @@ from torch.utils.data import Subset
 
 import sys
 import os
-run_dir = os.path.dirname(os.path.abspath(__file__))
-project_dir = os.path.dirname(run_dir)
-if project_dir not in sys.path:
-    sys.path.insert(0, project_dir)
+sys.path.insert(0, "/srv/home/zxu444/vision/adaptive_inference")
 
 from libs.datasets import make_dataset, make_data_loader
 from libs.model import make_resnet, make_vit, Evaluator
@@ -64,7 +61,7 @@ def main(args):
         masks[i, idx] = 0
     evaluator = Evaluator(model_name = args.model, dataset_name = args.dataset, limit = 0, random_seed = 2023)
 
-    evaluator.set_log_path(log_path = f"log/testEval_{args.model}_{args.dataset}")
+    evaluator.set_log_path(log_path = f"log/subset5000/testEval_{args.model}_{args.dataset}")
     evaluator.evaluate(masks)
     evaluator.save()
 

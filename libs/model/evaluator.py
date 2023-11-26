@@ -50,14 +50,10 @@ class Evaluator:
                             'train_split': 'train',
                             'val_split': 'val',
                             'batch_size': 512,
-                            'num_workers': 16}
+                            'num_workers': 12}
 
         
         self.cfg = cfg
-
-        log_path = f"log/subset/{model_name}_{cfg['data']['dataset']}"
-        utils.set_log_path(log_path)
-        utils.ensure_path(log_path)
 
         ### dataset
         val_set = make_dataset(
@@ -172,16 +168,17 @@ class Evaluator:
         
         print("========== done ==========")
     
-    def save(self):
+    def save(self,masks, skip_block= 0):
         np.savez(
-            f"{self.log_path}/{self.model_name}_{self.cfg['data']['dataset']}.npz", 
-            masks=self.masks,
+            f"{self.log_path}/{self.model_name}_{self.cfg['data']['dataset']}_skip{skip_block}.npz", 
+            masks=masks,
             accs=self.accs_mask_loader.astype(float),
             over_accs = self.accs_mask.astype(float),
             macs_total = self.macs_mask.astype(float)
         )
 
     def _evaluation_loop(self, mask):
+        mask_ori  = mask.clone()
         assert mask.shape[-1] == self.num_block, f"for one mask, mask shape is {mask.shape}"
         # Initialize counters
         total_correct = 0
@@ -192,11 +189,15 @@ class Evaluator:
         
         for idx, (x, _, y) in enumerate(self.val_loader):
             x, y = x.cuda(), y.cuda()
-            if len(mask.shape) == 1:
-                mask = mask.repeat(y.shape[0], 1)
+            if len(mask_ori.shape) == 1:
+                # print("align mask with y")
+                mask = mask_ori.repeat(y.shape[0], 1)
             else:
                 assert len(mask.shape) == 2, f"for one mask in forward, mask shape is {mask.shape}"
             
+            # print(f"x.shape: {x.shape}")
+            # print(f"y.shape: {y.shape}")
+            # print(f"mask.shape: {mask.shape}")
             with torch.no_grad():
                 logits = self.net(x, mask)
             _, pred = logits.max(dim=1)
@@ -210,11 +211,10 @@ class Evaluator:
             total_correct += (pred == y).sum().item()
             total_samples += y.size(0)
             
-        macs = (mask * self.macs_brk[1:]).sum(dim=-1) + self.macs_brk[0]
+        macs = (mask_ori * self.macs_brk[1:]).sum(dim=-1) + self.macs_brk[0]
         macs.clamp_(max=1)
         
         # print(macs)
-        # assert False
         
         # Compute overall accuracy
         overall_accuracy = total_correct / total_samples
