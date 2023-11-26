@@ -37,7 +37,7 @@ def parse_args():
     return args
 
 def main(args):
-    branches_per_setting = 256
+    timer = Timer()
 
     if args.model == "resnet18":
         num_block = 8-1
@@ -50,31 +50,21 @@ def main(args):
 
     # skip block
     skip_block = args.skip_block
-    utils.set_log_path(log_path = f"log/testEval_{args.model}_{args.dataset}")
-    utils.log(f"skip {skip_block} block | ")
+    log_str = f"skip {skip_block} block | "
     num_combinations = comb(num_block, skip_block)
 
-    #######
-    if num_combinations <= branches_per_setting:
-        all_combinations = list(combinations(range(num_block), skip_block))
-        masks = np.ones((len(all_combinations), num_block))
-        for i, idx in enumerate(all_combinations):
-            masks[i, idx] = 0
-    else:
+    masks = np.ones((64, num_block))
+    # Set random seed for the built-in random module
+    seed_value = 42  # you can choose any number you like
+    random.seed(seed_value)
+    
+    skip_block = 1
+    for i in range(64): # the last one is always true, skip no blocks
+        idx = random.sample(range(num_block), skip_block)
+        masks[i, idx] = 0
+    evaluator = Evaluator(model_name = args.model, dataset_name = args.dataset, limit = 0, random_seed = 2023)
 
-        masks = np.ones((branches_per_setting, num_block))
-        # Set random seed for the built-in random module
-        seed_value = 42  # you can choose any number you like
-        random.seed(seed_value)
-        
-        for i in range(branches_per_setting): # the last one is always true, skip no blocks
-            idx = random.sample(range(num_block), skip_block)
-            masks[i, idx] = 0
-    #######
-
-    evaluator = Evaluator(model_name = args.model, dataset_name = args.dataset, limit = 5000, random_seed = 2023)
-
-    evaluator.set_log_path(log_path = f"log/subset5000/testEval_{args.model}_{args.dataset}")
+    evaluator.set_log_path(log_path = f"log/testEval_{args.model}_{args.dataset}")
     evaluator.evaluate(masks)
     evaluator.save()
 
