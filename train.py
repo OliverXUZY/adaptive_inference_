@@ -52,7 +52,7 @@ def main(args):
 
     set_log_path(ckpt_path)
     writer = SummaryWriter(os.path.join(ckpt_path, 'tensorboard'))
-    rng = fix_random_seed(cfg.get('seed', 2023))
+    rng = fix_random_seed(cfg.get('seed', 42))
 
     ###########################################################################
     """ worker """
