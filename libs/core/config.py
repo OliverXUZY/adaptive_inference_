@@ -2,7 +2,7 @@ import yaml
 
 
 DEFAULTS = {
-    'seed': 1234567891,
+    # 'seed': 1234567891,
 
     'data': {
         'dataset': 'imagenet',

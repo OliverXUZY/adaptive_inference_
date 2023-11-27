@@ -1,2 +1,2 @@
-python eval.py 
-    # --load_path 'train_resnet18_cifar10'
+python eval.py \
+    --load_path './log/train_resnet50_imagenet'

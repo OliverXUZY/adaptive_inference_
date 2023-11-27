@@ -1,9 +1,10 @@
 import random
-
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from itertools import combinations
+from math import comb
 from .resnet import make_resnet
 from .modules import BranchEncoder, ContentEncoder, BranchVAE
 from .losses import rs_loss_fn, bce_loss_fn, vae_loss_fn
@@ -30,6 +31,9 @@ class Worker():
         self.n_knobs = self.resnet.n_blocks - 1
         self.n_branches = 2 ** self.n_knobs
         self.bit_mask = 2 ** torch.arange(self.n_knobs - 1, -1, -1)
+        # print("self.n_knobs", self.n_knobs)
+        # print("self.n_branches", self.n_branches)
+        # print("self.bit_mask", self.bit_mask)
 
         # build scheduler
         branch_enc_cfg['seq_len'] = self.n_knobs
@@ -250,8 +254,9 @@ class Worker():
             all_masks = all_masks[:n_branches]
         else:
             # include all branches
-            assert self.n_branches <= 4096, 'too many branches for inference'
-            all_masks = self._sample_branches(self.n_branches).cuda() # [n,kb] [128,7]
+            # assert self.n_branches <= 4096, 'too many branches for inference'
+            num_sampled_branches = min(self.n_branches, 4096)
+            all_masks = self._sample_branches(num_sampled_branches).cuda() # [n,kb] [128,7]
             macs = self._calculate_macs(all_masks)
             all_masks = all_masks[macs <= max_macs]
         self.masks = all_masks                                  # [n,kb] [128,7]
@@ -407,3 +412,84 @@ class Worker():
             'macs': macs,
         }
         return metrics_list
+    
+
+    ####  Zhuoyan Edit
+    @torch.no_grad()
+    def prep_test_branches_constrain_macs(self, n_branches, max_macs=1, batch_size=256, skip_block = 0, branches_per_setting = 256):
+        """
+        Pre-compute embeddings of test branches prior to evaluation.
+
+        Args:
+            n_branches (int): number of branches to sample.
+            max_macs (float): maximum MACs allowed.
+            batch_size (int): number of branches to embed at a time.
+        """
+        if self.branch_vae is not None:
+            # sample branches using learned VAE
+            ## NOTE: always include full model
+            all_masks = torch.ones(1, self.n_knobs, dtype=torch.bool).cuda()
+            while len(all_masks) < n_branches:
+                z = torch.randn(n_branches, self.latent_dim).cuda()
+                p = self.branch_vae(z=z)
+                masks = torch.bernoulli(p).bool()
+                macs = self._calculate_macs(masks)
+                masks = masks[macs <= max_macs]
+                all_masks = torch.cat([all_masks, masks]).unique(dim=0)
+            all_masks = all_masks[:n_branches]
+        else:
+            # sample branches for eval()
+            num_sampled_branches = min(self.n_branches, branches_per_setting)
+
+
+            ###33###33###33###33###33
+            ## zhuoyan:
+            # print(f"skip {skip_block} block | ")
+            num_combinations = comb(self.n_knobs, skip_block)
+
+            #######
+            if num_combinations <= num_sampled_branches:
+                all_combinations = list(combinations(range(self.n_knobs), skip_block))
+                all_masks = np.ones((len(all_combinations), self.n_knobs))
+                for i, idx in enumerate(all_combinations):
+                    all_masks[i, idx] = 0
+            else:
+                all_masks = np.ones((num_sampled_branches, self.n_knobs))
+                # Set random seed for the built-in random module
+                seed_value = 42  # you can choose any number you like
+                random.seed(seed_value)
+                # print("all_masks0: ", all_masks0)
+                for i in range(num_sampled_branches): # the last one is always true, skip no blocks
+                    idx = random.sample(range(self.n_knobs), skip_block)
+                    # print("idx: ", idx)
+                    all_masks[i, idx] = 0
+            # print("all_masks0: ", all_masks0)
+            all_masks = all_masks.astype(bool)
+            # print(masks.dtype)
+            all_masks = torch.from_numpy(all_masks).cuda()
+
+            ###33###33###33###33###33
+            ## original
+            # all_masks = self._sample_branches(num_sampled_branches).cuda() # [n,kb] [128,7]
+            # macs = self._calculate_macs(all_masks)
+            # all_masks = all_masks[macs <= max_macs]
+
+        # print("all_masks0: ", all_masks0)
+        # print("all_masks: ", all_masks)
+        # print("all_masks0.shape: ", all_masks0.shape)
+        # print("all_masks.shape: ", all_masks.shape)
+        self.masks = all_masks                                  # [n,kb] [128,7]
+        self.macs = self._calculate_macs(all_masks)             # [n] [128]
+        # print("self.masks.shape: ", self.masks.shape)
+        # print("self.masks: ", self.masks)
+        # print("self.macs.shape: ", self.macs.shape)
+        # assert False
+        
+        # embed sampled branches
+        self.bv = torch.cat(
+            [self._embed_branch(m) for m in all_masks.split(batch_size)]
+        )
+        # print("self.bv.shape: ", self.bv.shape) # [n,branch_enc.out_dim] [128,128]
+        # assert False
+
+    
