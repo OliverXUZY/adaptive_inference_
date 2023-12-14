@@ -89,7 +89,7 @@ if __name__ == '__main__':
     args = parse_args()
     device_count = torch.cuda.device_count()
     args._parallel = False
-    if device_count > 1:
-        print(f"Multiple GPUs detected (n_gpus={device_count}), use all of them!")
-        args._parallel = True
+    # if device_count > 1:
+    #     print(f"Multiple GPUs detected (n_gpus={device_count}), use all of them!")
+    #     args._parallel = True
     main(args)

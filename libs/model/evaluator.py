@@ -37,6 +37,17 @@ class Evaluator:
         if dataset_name == 'cifar10':
             cfg['data'] = {'dataset': 'cifar10',
                             'root': '/srv/home/zxu444/datasets/cifar10_dataset ',
+                            # 'root': '/backup/zhuoyan/datasets/cifar10',
+                            'downsample': True,
+                            'train_split': 'train',
+                            'val_split': 'test',
+                            'batch_size': 64,
+                            'num_workers': 8}
+        
+        if dataset_name == 'cifar100':
+            cfg['data'] = {'dataset': 'cifar100',
+                            # 'root': '/srv/home/zxu444/datasets/cifar10_dataset ',
+                            'root': '/backup/zhuoyan/datasets/cifar100',
                             'downsample': True,
                             'train_split': 'train',
                             'val_split': 'test',
@@ -45,7 +56,8 @@ class Evaluator:
 
         elif dataset_name == 'imagenet':
             cfg['data'] = {'dataset': 'imagenet',
-                            'root': '/srv/home/zxu444/datasets/imagenet/images',
+                            # 'root': '/srv/home/zxu444/datasets/imagenet/images',
+                            'root': '/backup/zhuoyan/datasets/imagenet',
                             'downsample': True,
                             'train_split': 'train',
                             'val_split': 'val',
@@ -81,7 +93,11 @@ class Evaluator:
 
         ### model
         if "resnet" in self.model_name:
-            net, macs_brk = make_resnet(self.model_name, self.dataset_name, True, load_from="timm", model_card = "timm/resnet50.a1_in1k")
+            if "resnet50" in self.model_name:
+                model_card = "timm/resnet50.a1_in1k"
+            elif "resnet18" in self.model_name:
+                model_card = "timm/resnet18.a1_in1k"
+            net, macs_brk = make_resnet(self.model_name, self.dataset_name, True, load_from="timm", model_card = model_card)
             macs_brk = macs_brk.cuda()
         elif "vit" in self.model_name:
             # TODO: tem
@@ -101,11 +117,11 @@ class Evaluator:
         
         device_count = torch.cuda.device_count()
         self._parallel = False
-        if device_count > 1:
-            print(f"Multiple GPUs detected (n_gpus={device_count}), use all of them!")
-            self._parallel = True
-        if self._parallel:
-            net = nn.DataParallel(net)
+        # if device_count > 1:
+        #     print(f"Multiple GPUs detected (n_gpus={device_count}), use all of them!")
+        #     self._parallel = True
+        # if self._parallel:
+        #     net = nn.DataParallel(net)
         net.eval()
         self.net = net
 

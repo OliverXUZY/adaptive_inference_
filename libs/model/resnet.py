@@ -8,7 +8,7 @@ from timm.models._hub import has_hf_hub, download_cached_file, check_cached_file
 from collections import OrderedDict
 
 ckpt_dir = os.path.join(os.path.dirname(__file__), 'ckpt')
-macs_dir = os.path.join(os.path.dirname(__file__), 'macs',"timm")
+macs_dir = os.path.join(os.path.dirname(__file__), 'macs')
 
 n_classes = {'imagenet': 1000, 'cifar10': 10, 'cifar100': 100}
 
